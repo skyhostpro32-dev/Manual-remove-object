@@ -3,43 +3,41 @@ from PIL import Image
 import numpy as np
 import cv2
 import io
-from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="AI Object Remover", layout="centered")
 
-st.title("🧠 AI Object Remover (Stable)")
+st.title("🧠 AI Object Remover (Click Mask - No Canvas)")
 
 uploaded_file = st.file_uploader("Upload Image", type=["png", "jpg", "jpeg"])
 
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
-
-    # Resize for stability
-    image = image.resize((500, 500))
     img_np = np.array(image)
 
-    st.write("🖼️ Draw on the canvas below (same size as image)")
+    st.image(image, caption="Click points on object")
 
-    # Show image
-    st.image(image, caption="Reference Image", use_column_width=False)
+    # Store clicked points
+    if "points" not in st.session_state:
+        st.session_state.points = []
 
-    # Safe canvas (NO background_image)
-    canvas = st_canvas(
-        fill_color="rgba(255, 0, 0, 0.3)",
-        stroke_width=20,
-        stroke_color="red",
-        height=500,
-        width=500,
-        drawing_mode="freedraw",
-        key="canvas",
-    )
+    # Click input
+    click = st.number_input("Add X coordinate", min_value=0, max_value=image.width)
+    click_y = st.number_input("Add Y coordinate", min_value=0, max_value=image.height)
 
-    if st.button("Remove Selected Object"):
-        if canvas.image_data is not None:
+    if st.button("Add Point"):
+        st.session_state.points.append((int(click), int(click_y)))
 
-            # Extract mask
-            mask = canvas.image_data[:, :, 3]
-            mask = (mask > 0).astype("uint8") * 255
+    st.write("Selected Points:", st.session_state.points)
+
+    if st.button("Remove Object"):
+        if len(st.session_state.points) == 0:
+            st.warning("Add at least one point")
+        else:
+            mask = np.zeros((image.height, image.width), dtype=np.uint8)
+
+            # Create circular mask around points
+            for (x, y) in st.session_state.points:
+                cv2.circle(mask, (x, y), 30, 255, -1)
 
             # Smooth mask
             kernel = np.ones((5, 5), np.uint8)
@@ -62,5 +60,3 @@ if uploaded_file:
                 file_name="removed.png",
                 mime="image/png"
             )
-        else:
-            st.warning("Draw on the canvas first.")
