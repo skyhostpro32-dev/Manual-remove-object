@@ -3,5 +3,4 @@ pillow==10.2.0
 numpy==1.26.4
 opencv-python-headless==4.9.0.80
 streamlit-drawable-canvas==0.9.3
-rembg==2.0.50
-onnxruntime==1.16.3
+rembg[cpu]
